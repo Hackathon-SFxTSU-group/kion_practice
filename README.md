@@ -10,3 +10,7 @@ pip install torch==2.3.0+cu121 torchvision==0.18.0+cu121 torchaudio==2.3.0+cu121
 ```
 pip install -r requirements.txt
 ```
+4. Установка torchreid
+```
+pip install git+https://github.com/KaiyangZhou/deep-person-reid.git
+```
