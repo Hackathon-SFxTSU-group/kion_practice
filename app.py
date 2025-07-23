@@ -9,6 +9,7 @@ from classes.video_analyzer_complex import VideoPipeline
 from classes.scene_enricher import SceneEnricher
 from classes.simple_transcriptor import ASRProcessor
 from classes.openai import OpenAIThemer
+from classes.scene_merger import UnifiedSceneMerger
 
 
 VIDEO_PATH = "videos/Video_01.mp4"          # Путь к видеофайлу
@@ -54,3 +55,6 @@ themer = OpenAIThemer(
         base_url="https://api.proxyapi.ru/openai/v1"
     )
 themes = themer.get_themes(segments_short, audio_path=VIDEO_PATH)
+
+merger = UnifiedSceneMerger("video.mp4")
+final_scenes = merger.run()
