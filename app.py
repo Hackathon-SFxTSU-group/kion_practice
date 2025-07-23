@@ -9,7 +9,7 @@ from classes.video_analyzer_complex import VideoPipeline
 from classes.scene_enricher import SceneEnricher
 from classes.simple_transcriptor import ASRProcessor
 from classes.openai import OpenAIThemer
-from classes.scene_merger import UnifiedSceneMerger
+from classes.scene_merge import UnifiedSceneMerger
 
 
 VIDEO_PATH = "videos/Video_01.mp4"          # Путь к видеофайлу
