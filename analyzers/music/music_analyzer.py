@@ -1,28 +1,35 @@
 import os
-import json
 import numpy as np
 import librosa
 import openl3
+import json
+import torch
+import whisper
 import tensorflow_hub as hub
-from moviepy.editor import VideoFileClip
 from scipy.ndimage import gaussian_filter1d
 from sklearn.metrics.pairwise import cosine_similarity
+from utils.audio_tools import extract_audio_ffmpeg, get_video_duration
 
 
-class MusicAnalyzer:
-    def __init__(self, video_path, output_dir="output_scenes"):
+class AudioSceneAnalyzer:
+    def __init__(self, video_path, output_dir="output_scenes", whisper_model_size="tiny",
+                 ffmpeg_path="ffmpeg", ffprobe_path="ffprobe"):
         self.video_path = video_path
         self.output_dir = output_dir
-        self.audio_path = "temp_audio.wav"
+        self.audio_path = os.path.join(output_dir, "temp_audio.wav")
+        self.ffmpeg_path = ffmpeg_path
+        self.ffprobe_path = ffprobe_path
+        self.video_duration = 0
         self.openl3_model = None
         self.yamnet_model = None
+        self.whisper_model = whisper.load_model(
+            whisper_model_size, device="cuda" if torch.cuda.is_available() else "cpu"
+        )
         os.makedirs(output_dir, exist_ok=True)
 
     def extract_audio(self):
-        clip = VideoFileClip(self.video_path)
-        clip.audio.write_audiofile(self.audio_path, fps=44100, codec='pcm_s16le', verbose=False, logger=None)
-        self.video_duration = clip.duration
-        clip.close()
+        self.audio_path = extract_audio_ffmpeg(self.video_path, self.audio_path, self.ffmpeg_path)
+        self.video_duration = get_video_duration(self.video_path, self.ffprobe_path)
 
     def load_models(self):
         if self.openl3_model is None:
@@ -50,7 +57,8 @@ class MusicAnalyzer:
         rms = librosa.feature.rms(y=y)[0]
         return librosa.frames_to_time(np.arange(len(rms)), sr=sr), rms
 
-    def detect_scenes(self, features, timestamps, yamnet_labels, rms_t, rms_vals, sensitivity=0.85, min_scene_duration=2.0):
+    def detect_scenes(self, features, timestamps, yamnet_labels, rms_t, rms_vals,
+                      sensitivity=0.85, min_scene_duration=2.0):
         smoothed = gaussian_filter1d(features, sigma=2, axis=0)
         diffs = [1 - cosine_similarity([smoothed[i - 1]], [smoothed[i]])[0][0] for i in range(1, len(smoothed))]
         threshold = np.percentile(diffs, sensitivity * 100)
@@ -72,7 +80,21 @@ class MusicAnalyzer:
 
         return changes
 
-    def export_all_to_json(self, changes, method_name="audio_openl3_yamnet_rms", sensitivity=0.85, min_scene_duration=2.0):
+    def transcribe_audio(self):
+        result = self.whisper_model.transcribe(self.audio_path)
+        return result['segments']
+
+    def detect_audio_activity(self, frame_duration=1.0):
+        y, sr = librosa.load(self.audio_path, sr=None)
+        frame_length = int(sr * frame_duration)
+        energy = [
+            np.sqrt(np.mean(y[i:i + frame_length] ** 2))
+            for i in range(0, len(y), frame_length)
+        ]
+        return energy
+
+    def export_all_to_json(self, changes, transcript,
+                           method_name="audio_openl3_yamnet_rms", sensitivity=0.85, min_scene_duration=2.0):
         scene_bounds = [0] + changes + [self.video_duration]
         scenes = []
         for i in range(len(scene_bounds) - 1):
@@ -99,9 +121,10 @@ class MusicAnalyzer:
             "method": method_name,
             "scenes": scenes,
             "detection_log": detection_log,
+            "speech_segments": transcript,
             "meta": {
                 "video_path": self.video_path,
-                "model_used": ["openl3", "yamnet", "rms"],
+                "model_used": ["openl3", "yamnet", "rms", "whisper"],
                 "sensitivity": sensitivity,
                 "min_scene_duration": min_scene_duration
             }
@@ -121,5 +144,6 @@ class MusicAnalyzer:
         rms_t, rms_vals = self.compute_rms()
         changes = self.detect_scenes(features, timestamps, yamnet_labels, rms_t, rms_vals,
                                      sensitivity, min_scene_duration)
-        self.export_all_to_json(changes, sensitivity=sensitivity, min_scene_duration=min_scene_duration)
-        print(f"✅ Найдено {len(changes)+1} сцен. Данные сохранены в JSON.")
+        transcript = self.transcribe_audio()
+        self.export_all_to_json(changes, transcript, sensitivity=sensitivity, min_scene_duration=min_scene_duration)
+        print(f"✅ Найдено {len(changes)+1} сцен. Добавлено {len(transcript)} фрагментов речи.")
