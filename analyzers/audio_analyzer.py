@@ -130,7 +130,7 @@ class AudioSceneAnalyzer:
             }
         }
 
-        json_path = os.path.join(self.output_dir, f"{method_name}_scenes_full.json")
+        json_path = os.path.join("reports", f"{method_name}_scenes_full.json")
         with open(json_path, 'w') as f:
             json.dump(json_data, f, indent=4)
 

@@ -1,39 +1,44 @@
 # Импорт необходимых модулей
-from tracking.face_reid import FaceReId
+import os
+import torch
+import pickle
+
 from utils.scene_tools import (
    enrich_scenes_with_characters,
    enrich_scenes_with_audio,
    clean_and_merge_short_scenes,
    print_scenes_formatted, cluster_scenes_with_time_windows, resolve_time_overlaps,
 )
-from sentence_transformers import SentenceTransformer
 
+from sentence_transformers import SentenceTransformer
 from utils.video_tools import save_scenes_ffmpeg
-from analyzers.video.video_analyzer import VideoAnalyzer
-from analyzers.audio.audio_analyzer import AudioSceneAnalyzer
-import os
-from analyzers.video.render_video import render_video_with_faces
-import torch
+from analyzers.audio_analyzer import AudioSceneAnalyzer
+from analyzers.video_analyzer_complex import VideoPipeline
+
 
 VIDEO_PATH = "videos/Video_01.mp4"          # Путь к видеофайлу
 AUDIO_PATH = "temp/temp_audio.wav"           # Временный WAV
-OUTPUT_DIR = "splitted_scenes/"         # Папка для результатов
+OUTPUT_DIR = "output_files/"
+TEMP_DIR = "temp/"         # Папка для результатов
+CACHE_PATH = os.path.join(TEMP_DIR, "results.pkl")
 MIN_SCENE_LENGTH = 2.0                  # Мин. длительность сцены
-MAX_SCENE_LENGTH = 300.0   
+MAX_SCENE_LENGTH = 300.0                # Макс. допустимая длина сцены (5 мин)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 
-video_analyzer = VideoAnalyzer(device)
-scenes, track_faces, tracking_frames = video_analyzer.analyze_video(VIDEO_PATH)
+if os.path.exists(CACHE_PATH):
+    print("🔁 Загружаем из кеша...")
+    with open(CACHE_PATH, "rb") as f:
+        scenes, track_faces, tracking_frames, track_id_to_person = pickle.load(f)
 
+else:
+    pipeline = VideoPipeline()
+    scenes, track_faces, tracking_frames, track_id_to_person = pipeline.run(VIDEO_PATH, OUTPUT_DIR)
 
-face_reid = FaceReId()
-track_id_to_person = face_reid.analyze_persons(track_faces)
-
-
-render_video_with_faces(VIDEO_PATH, "output_with_faces.mp4", tracking_frames, track_id_to_person)
+    with open(CACHE_PATH, "wb") as f:
+        pickle.dump((scenes, track_faces, tracking_frames, track_id_to_person), f)
 
 
 scene_data = enrich_scenes_with_characters(scenes, track_id_to_person)
