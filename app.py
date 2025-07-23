@@ -7,6 +7,8 @@ from utils.video_tools import save_scenes_ffmpeg
 from classes.audio_analyzer import AudioSceneAnalyzer
 from classes.video_analyzer_complex import VideoPipeline
 from classes.scene_enricher import SceneEnricher
+from classes.simple_transcriptor import ASRProcessor
+from classes.openai import OpenAIThemer
 
 
 VIDEO_PATH = "videos/Video_01.mp4"          # Путь к видеофайлу
@@ -44,3 +46,11 @@ energy = splitter.detect_audio_activity(frame_duration=1.0)
 enricher = SceneEnricher(segments, energy)
 scenes_final = enricher.run(scenes, track_id_to_person)
 #scenes_final = enricher.run(scene_data, track_id_to_person, print_report=False)
+
+asr = ASRProcessor()
+segments_short = asr.process(VIDEO_PATH)
+themer = OpenAIThemer(
+        api_key="",  # Добавь свой ключ
+        base_url="https://api.proxyapi.ru/openai/v1"
+    )
+themes = themer.get_themes(segments_short, audio_path=VIDEO_PATH)
