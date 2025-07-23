@@ -10,7 +10,7 @@ from sentence_transformers import SentenceTransformer
 
 from utils.video_tools import save_scenes_ffmpeg
 from analyzers.video.video_analyzer import VideoAnalyzer
-from analyzers.music.music_analyzer import AudioSceneAnalyzer
+from analyzers.audio.audio_analyzer import AudioSceneAnalyzer
 import os
 from analyzers.video.render_video import render_video_with_faces
 import torch
