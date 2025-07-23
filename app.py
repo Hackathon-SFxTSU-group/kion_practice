@@ -15,12 +15,16 @@ from analyzers.video.video_analyzer import VideoAnalyzer
 from analyzers.music.music_analyzer import MusicAnalyzer
 import os
 from analyzers.video.render_video import render_video_with_faces
+import torch
 
 VIDEO_PATH = "videos/Video_01.mp4"          # Путь к видеофайлу
 AUDIO_PATH = "temp/temp_audio.wav"           # Временный WAV
 OUTPUT_DIR = "splitted_scenes/"         # Папка для результатов
 MIN_SCENE_LENGTH = 2.0                  # Мин. длительность сцены
 MAX_SCENE_LENGTH = 300.0   
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
 
 splitter = MusicAnalyzer(
     video_path=VIDEO_PATH,
@@ -29,7 +33,7 @@ splitter = MusicAnalyzer(
 splitter.run(sensitivity=0.88, min_scene_duration=2.0)
 
 
-video_analyzer = VideoAnalyzer()
+video_analyzer = VideoAnalyzer(device)
 scenes, track_faces, tracking_frames = video_analyzer.analyze_video(VIDEO_PATH)
 
 
