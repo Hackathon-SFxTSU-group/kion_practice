@@ -10,7 +10,8 @@ from tracking.face_reid import FaceReId
 
 
 class VideoPipeline:
-    def __init__(self, using_cache=False):
+    def __init__(self, using_cache=False, render_video=False):
+        self.render_video = render_video
         if not using_cache:
             self.splitter = CLIPSceneSplitter()
             self.detector = ObjectDetector()
@@ -76,7 +77,9 @@ class VideoPipeline:
 
         self.export_report_to_json(video_path, output_dir, scene_split_time, tracking_time)
         track_id_to_person = self.face_reid.analyze_persons(self.track_faces)
-        self.render_labeled_video(video_path, output_video_path, self.tracking_frames, track_id_to_person)
+
+        if self.render_video:
+            self.render_labeled_video(video_path, output_video_path, self.tracking_frames, track_id_to_person)
 
         return self.scene_data, self.track_faces, self.tracking_frames, track_id_to_person
 
