@@ -94,7 +94,7 @@ class VideoPipeline:
 
         os.makedirs("report", exist_ok=True)
         video_name = os.path.splitext(os.path.basename(video_path))[0]
-        output_path = os.path.join("report", f"{video_name}_video_report.json")
+        output_path = os.path.join("reports", f"{video_name}_video_report.json")
 
         with open(output_path, "w") as f:
             json.dump(report, f, indent=4)
