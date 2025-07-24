@@ -1,14 +1,15 @@
 from sentence_transformers import SentenceTransformer
 import numpy as np
 
-from utils import (
+from utils.scene_tools import (
     enrich_scenes_with_characters,
     enrich_scenes_with_audio,
     group_semantic_scenes,
     cluster_scenes_with_time_windows,
     resolve_time_overlaps,
     clean_and_merge_short_scenes,
-    print_scenes_formatted,
+    save_scenes_report_to_json
+
 )
 
 
@@ -54,6 +55,6 @@ class SceneEnricher:
         cleaned = self.postprocess(grouped)
 
         if print_report:
-            print_scenes_formatted(cleaned)
+            save_scenes_report_to_json(cleaned)
 
         return cleaned

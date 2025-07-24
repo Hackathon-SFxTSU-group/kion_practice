@@ -2,6 +2,8 @@ import re
 from sentence_transformers import util
 import numpy as np
 from sklearn.cluster import DBSCAN
+import os
+import json
 
 def enrich_scenes_with_characters(scene_data, track_id_to_person):
     # Добавляем персонажей в каждую сцену по track_id → person mapping
@@ -43,14 +45,10 @@ def group_semantic_scenes(
         char_thresh=0.5,
         text_thresh=0.55,
         audio_thresh=0.02
-):
+    ):
     # Группируем сцены, которые похожи по персонажам, тексту и аудио по порогам
     grouped = []
     buffer = [scene_data[0]]
-
-    def get_identities(scene):
-        # Получаем персонажей или track_ids для сцены
-        return scene.get('characters', []) or scene.get('track_ids', [])
 
     prev_text = scene_data[0]['transcript']
 
@@ -172,26 +170,6 @@ def resolve_time_overlaps(chapters):
 def enrich_scenes_with_audio(scenes, segments, energy, frame_duration=1.0):
     # Добавляем к сценам текст и аудио-энергию из сегментов и массива энергии
 
-    def clip_text_to_scene(seg, start, end):
-        # Вырезаем часть текста сегмента, соответствующую сцене по времени
-        seg_start, seg_end = seg["start"], seg["end"]
-        overlap_start = max(start, seg_start)
-        overlap_end = min(end, seg_end)
-        overlap_dur = max(0.0, overlap_end - overlap_start)
-        total_dur = seg_end - seg_start
-
-        if overlap_dur == 0 or total_dur == 0:
-            return ""
-
-        words = seg["text"].strip().split()
-        if len(words) <= 2:
-            return seg["text"].strip()
-
-        ratio = overlap_dur / total_dur
-        count = max(1, int(len(words) * ratio))
-        # Возвращаем первые или последние слова в зависимости от позиции сцены в сегменте
-        return " ".join(words[:count]) if overlap_start == seg_start else " ".join(words[-count:])
-
     for scene in scenes:
         start, end = scene["start"], scene["end"]
 
@@ -216,16 +194,6 @@ def clean_and_merge_short_scenes(scenes, min_duration=2.0, min_words=3):
     # Убираем слишком короткие или малосодержательные сцены, сливая их с соседними
     cleaned = []
     buffer = None
-
-    def merge_scene(a, b):
-        # Объединяем две сцены в одну
-        return {
-            "start": a["start"],
-            "end": b["end"],
-            "characters": sorted(set(a.get("characters", []) + b.get("characters", []))),
-            "transcript": " ".join([a["transcript"], b["transcript"]]).strip(),
-            "avg_rms": float(np.mean([a["avg_rms"], b["avg_rms"]]))
-        }
 
     for scene in scenes:
         duration = scene["end"] - scene["start"]
@@ -266,3 +234,64 @@ def print_scenes_formatted(scenes):
         print(f"🔊 Средняя громкость: {scene['avg_rms']:.4f}")
         print(f"🗣 Реплика:\n\"{scene['transcript'].strip()}\"")
         print("-" * 60)
+
+def save_scenes_report_to_json(scenes):
+    # Создание папки reports
+    os.makedirs("reports", exist_ok=True)
+
+    base_name = "scenes_enriched"
+
+    output_path = os.path.join("reports", f"{base_name}_report.json")
+
+    # Формируем "сухой" отчет
+    scene_list = []
+    for i, scene in enumerate(scenes):
+        scene_info = {
+            "scene_id": i + 1,
+            "start_time_sec": round(scene["start"], 2),
+            "end_time_sec": round(scene["end"], 2),
+            "characters": scene.get("characters", []),
+            "avg_rms": round(scene.get("avg_rms", 0.0), 4),
+            "transcript": scene.get("transcript", "").strip()
+        }
+        scene_list.append(scene_info)
+
+    # Сохраняем в JSON
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(scene_list, f, ensure_ascii=False, indent=4)
+
+    print(f"✅ JSON-отчёт по сценам сохранён: {output_path}")
+
+def merge_scene(a, b):
+        # Объединяем две сцены в одну
+        return {
+            "start": a["start"],
+            "end": b["end"],
+            "characters": sorted(set(a.get("characters", []) + b.get("characters", []))),
+            "transcript": " ".join([a["transcript"], b["transcript"]]).strip(),
+            "avg_rms": float(np.mean([a["avg_rms"], b["avg_rms"]]))
+        }
+
+def clip_text_to_scene(seg, start, end):
+        # Вырезаем часть текста сегмента, соответствующую сцене по времени
+        seg_start, seg_end = seg["start"], seg["end"]
+        overlap_start = max(start, seg_start)
+        overlap_end = min(end, seg_end)
+        overlap_dur = max(0.0, overlap_end - overlap_start)
+        total_dur = seg_end - seg_start
+
+        if overlap_dur == 0 or total_dur == 0:
+            return ""
+
+        words = seg["text"].strip().split()
+        if len(words) <= 2:
+            return seg["text"].strip()
+
+        ratio = overlap_dur / total_dur
+        count = max(1, int(len(words) * ratio))
+        # Возвращаем первые или последние слова в зависимости от позиции сцены в сегменте
+        return " ".join(words[:count]) if overlap_start == seg_start else " ".join(words[-count:])
+
+def get_identities(scene):
+    # Получаем персонажей или track_ids для сцены
+    return scene.get('characters', []) or scene.get('track_ids', [])
