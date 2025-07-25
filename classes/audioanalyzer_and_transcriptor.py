@@ -23,7 +23,7 @@ class AudioAnalyzer:
     - RMS (энергия сигнала).
     """
 
-    def __init__(self, video_path, output_dir="output_scenes", whisper_model_size="tiny",
+    def __init__(self, video_path, output_dir="temp", whisper_model_size="tiny",
                  ffmpeg_path="ffmpeg", ffprobe_path="ffprobe"):
         # Пути к файлам и параметрам
         self.video_path = video_path
