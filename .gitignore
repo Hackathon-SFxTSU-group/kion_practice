@@ -208,3 +208,6 @@ __marimo__/
 
 requirements_rezult.txt
 models/
+videos/
+output_files/
+temp/
