@@ -5,13 +5,32 @@ from openai import OpenAI
 
 
 class OpenAIThemer:
+    """
+    Класс для тематической группировки распознанных речевых сегментов (ASR)
+    с использованием LLM-модели OpenAI (например, GPT-4o).
+    """
+
     def __init__(self, api_key: str, base_url: str):
+        """
+        Инициализация клиента OpenAI.
+
+        :param api_key: API-ключ для доступа к OpenAI
+        :param base_url: Базовый URL (например, локальный сервер или https://api.openai.com/v1)
+        """
         self.client = OpenAI(
             api_key=api_key,
             base_url=base_url
         )
 
     def get_themes(self, segments_short, audio_path: str):
+        """
+        Отправляет сегменты речи в LLM для смысловой группировки по темам.
+
+        :param segments_short: Список речевых сегментов в формате [{"start": ..., "end": ..., "text": ...}, ...]
+        :param audio_path: Путь к аудиофайлу (используется для имени отчета)
+        :return: Словарь с темами: {"themes": [{"theme": ..., "time": [start, end]}, ...]}
+        """
+        # Формируем промпт для модели
         prompt = (
             "Вот список сегментов речи с временными метками:\n\n"
             f"{json.dumps(segments_short, ensure_ascii=False, indent=2)}\n\n"
@@ -24,6 +43,7 @@ class OpenAIThemer:
             "{ \"themes\": [ { \"theme\": \"Название темы\", \"time\": [start, end] }, ... ] }"
         )
 
+        # Замер времени
         t0 = time.time()
         response = self.client.chat.completions.create(
             model="gpt-4o",
@@ -39,19 +59,30 @@ class OpenAIThemer:
             ]
         )
         duration = round(time.time() - t0, 2)
+
+        # Получаем текст из ответа модели
         content = response.choices[0].message.content
 
+        # Пытаемся распарсить JSON
         try:
             themes_data = json.loads(content)
         except json.JSONDecodeError:
             print("❌ Ошибка разбора JSON из ответа модели.")
             themes_data = {"themes": []}
 
+        # Сохраняем результат в отчёт
         self.save_themes_report(themes_data, audio_path, duration)
 
         return themes_data
 
     def save_themes_report(self, themes_data, audio_path, duration_sec):
+        """
+        Сохраняет результат группировки в JSON-файл.
+
+        :param themes_data: Словарь {"themes": [...]}
+        :param audio_path: Путь к аудиофайлу (используется для имени файла)
+        :param duration_sec: Время обработки в секундах
+        """
         os.makedirs("reports", exist_ok=True)
         base_name = os.path.splitext(os.path.basename(audio_path))[0]
         output_path = os.path.join("reports", f"{base_name}_themes_report.json")
