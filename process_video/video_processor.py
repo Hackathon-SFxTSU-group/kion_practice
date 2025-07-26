@@ -41,6 +41,9 @@ class VideoProcessor:
             tracks = self.tracker.update(detections, frame)
 
             for t in tracks:
+                if not t.get("confirmed", True):
+                    continue  # Пропускаем неполностью подтверждённые треки
+
                 track_id = t['track_id']
                 x1, y1, x2, y2 = map(int, t['bbox'])  # Получаем координаты
 
