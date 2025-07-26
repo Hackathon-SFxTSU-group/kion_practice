@@ -65,9 +65,9 @@ class CLIPSceneSplitter:
         # Добавляем последнюю сцену до конца видео
         scenes.append((timestamps[start], timestamps[-1]))
         return scenes  # Возвращаем список сцен как (start_time, end_time)
-
+    
+       # Основной метод: извлекает сцены из видео
     def detect_scenes(self, video_path, n_clusters=8):
-        # Основной метод: извлекает сцены из видео
         frames, timestamps = self.extract_frames(video_path)
         embeddings = self.compute_embeddings(frames)
         labels = self.cluster_embeddings(embeddings, n_clusters)
