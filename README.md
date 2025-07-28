@@ -14,3 +14,9 @@ pip install -r requirements.txt
 ```
 pip install git+https://github.com/KaiyangZhou/deep-person-reid.git
 ```
+
+# Ссылки
+
+- 📽️ [Презентация]([ссылка](https://disk.yandex.ru/edit/d/uN-H-BEUaMrcgMgXRSK8bCPegnqahzm72s0qoIz-cKg6cUJoZElnaGZ2UQ))
+- 🎬 [Видео]([ссылка](https://disk.yandex.ru/i/_QxxnU3xN41p4Q))
+- 📄 [Отчёт]([ссылка](https://disk.yandex.ru/i/ixSeW9BAj6gZtw))
